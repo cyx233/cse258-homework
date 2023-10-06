@@ -53,11 +53,13 @@ for d in dataset:
     d['parsed_date'] = t
 
 def feature(datum):
-    weekday_feature = [0 for i in range(7)]
-    weekday_feature[datum['parsed_date'].weekday()] = 1
-    month_feature = [0 for i in range(12)]
-    month_feature[datum['parsed_date'].month-1] = 1
-    return weekday_feature + month_feature
+    weekday_feature = [0 for i in range(6)]
+    if datum['parsed_date'].weekday() > 0:
+        weekday_feature[datum['parsed_date'].weekday()-1] = 1
+    month_feature = [0 for i in range(11)]
+    if datum['parsed_date'].month > 1:
+        month_feature[datum['parsed_date'].month-2] = 1
+    return [1, len(datum["review_text"])/max_len] + weekday_feature + month_feature
 
 
 X = list(map(feature, dataset))
@@ -72,9 +74,19 @@ assertFloatList(answers['Q2'][1], 19)
 def feature3(datum):
     return [1, len(datum["review_text"])/max_len, datum['parsed_date'].weekday(), datum['parsed_date'].month]
 
-
-X3 = list(map(feature, dataset))
+X3 = list(map(feature3, dataset))
 Y3 = list(map(lambda x: x['rating'], dataset))
+
+
+model = linear_model.LinearRegression()
+model.fit(X, Y)
+Y_pred = model.predict(X)
+mse2 = mean_squared_error(Y, Y_pred)
+
+model = linear_model.LinearRegression()
+model.fit(X3, Y3)
+Y_pred = model.predict(X3)
+mse3 = mean_squared_error(Y3, Y_pred)
 
 answers['Q3'] = [mse2, mse3]
 assertFloatList(answers['Q3'], 2)
@@ -91,8 +103,19 @@ train2, test2 = X2[:len(X2) // 2], X2[len(X2) // 2:]
 train3, test3 = X3[:len(X3) // 2], X3[len(X3) // 2:]
 trainY, testY = Y[:len(Y) // 2], Y[len(Y) // 2:]
 
+model = linear_model.LinearRegression()
+model.fit(train2, trainY)
+Y_pred = model.predict(test2)
+test_mse2 = mean_squared_error(testY, Y_pred)
+
+model = linear_model.LinearRegression()
+model.fit(train3, trainY)
+Y_pred = model.predict(test3)
+test_mse3 = mean_squared_error(testY, Y_pred)
+
 answers['Q4'] = [test_mse2, test_mse3]
 assertFloatList(answers['Q4'], 2)
+print(answers)
 
 ### Question 5
 f = open("beer_50000.json")
