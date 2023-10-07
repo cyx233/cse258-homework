@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 from sklearn import linear_model
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, confusion_matrix, balanced_accuracy_score, precision_score
 import numpy
 import random
 import gzip
@@ -115,7 +115,6 @@ test_mse3 = mean_squared_error(testY, Y_pred)
 
 answers['Q4'] = [test_mse2, test_mse3]
 assertFloatList(answers['Q4'], 2)
-print(answers)
 
 ### Question 5
 f = open("beer_50000.json")
@@ -123,28 +122,53 @@ dataset = []
 for l in f:
     dataset.append(eval(l))
 
-# X =
-# Y =
+def feature(datum):
+    return [1, len(datum['review/text'])]
 
-# TP =
-# TN =
-# FP =
-# FN =
-# BER =
+X = [feature(d) for d in dataset]
+Y = [d['review/overall'] >= 4 for d in dataset]
+
+clf = linear_model.LogisticRegression(class_weight='balanced')
+clf.fit(X, Y)
+
+Y_pred = clf.predict(X)
+
+TN, FP, FN, TP = confusion_matrix(Y, Y_pred).ravel()
+BER = 1 - balanced_accuracy_score(Y, Y_pred)
 
 answers['Q5'] = [TP, TN, FP, FN, BER]
 assertFloatList(answers['Q5'], 5)
 
 ### Question 6
 precs = []
+Y_pred_prob = clf.predict_proba(X)[:, 1]
+Y = numpy.array(Y)
 for k in [1, 100, 1000, 10000]:
-    pass
+    top_k_idx = Y_pred_prob.argsort()[-k:]
+    precs.append(precision_score(Y[top_k_idx], Y_pred[top_k_idx]))
+
 answers['Q6'] = precs
 assertFloatList(answers['Q6'], 4)
 
 ### Question 7
-its_test_BER = 1000
-answers['Q7'] = ["Description of my solution", its_test_BER]
+def feature(datum):
+#   feat = [1, len(datum['review/text']), datum['review/taste'], datum['review/appearance'], datum['review/aroma'], datum['review/palate']]
+  feat = [1, datum['review/taste'], datum['review/appearance'], datum['review/aroma'], datum['review/palate']]
+  return feat
+
+X = [feature(d) for d in dataset]
+Y = [d['review/overall'] >= 4 for d in dataset]
+
+clf = linear_model.LogisticRegression(class_weight='balanced')
+clf.fit(X, Y)
+
+Y_pred = clf.predict(X)
+
+its_test_BER = 1 - balanced_accuracy_score(Y, Y_pred)
+
+answers['Q7'] = ["Use scores of subfields instead of the length of review text as features.", its_test_BER]
 f = open("answers_hw1.txt", 'w')
 f.write(str(answers) + '\n')
 f.close()
+
+print(answers)
