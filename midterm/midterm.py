@@ -125,6 +125,10 @@ y = [d['hours'] for d in dataset]
 mod = linear_model.LinearRegression(fit_intercept=False)
 mod.fit(X,y)
 predictions = mod.predict(X)
+
+# In this dataset, MAE is better
+# Since there are some outliers with large values, that are more than 1000 times larger than median.
+# These outliers influence MSE too much.
 mse = MSE(y, predictions)
 mae = MAE(y, predictions)
 
