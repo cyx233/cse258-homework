@@ -12,40 +12,10 @@ def readJSON(path):
             g = None
         yield u, g, d
 
-
-### Time-played baseline: compute averages for each user, or return the global average if we've never seen the user before
-
-allHours = []
-userHours = defaultdict(list)
-
-for user, game, d in readJSON("train.json.gz"):
-    h = d["hours_transformed"]
-    allHours.append(h)
-    userHours[user].append(h)
-
-globalAverage = sum(allHours) / len(allHours)
-userAverage = {}
-for u in userHours:
-    userAverage[u] = sum(userHours[u]) / len(userHours[u])
-
-predictions = open("predictions_Hours.csv", "w")
-for l in open("pairs_Hours.csv"):
-    if l.startswith("userID"):
-        # header
-        predictions.write(l)
-        continue
-    u, g = l.strip().split(",")
-    if u in userAverage:
-        predictions.write(u + "," + g + "," + str(userAverage[u]) + "\n")
-    else:
-        predictions.write(u + "," + g + "," + str(globalAverage) + "\n")
-
-predictions.close()
-
-### Would-play baseline: just rank which games are popular and which are not, and return '1' if a game is among the top-ranked
 allHours = []
 for l in readJSON("train.json.gz"):
     allHours.append(l)
+
 hoursTrain = allHours[:165000]
 hoursValid = allHours[165000:]
 
@@ -56,6 +26,57 @@ for i in hoursTrain:
     game_user[i[1]].add(i[0])
 
 
+
+### Time-played 
+betaU = {}
+betaI = {}
+r_ui = {}
+globalAverage = 0
+for u, g, d in hoursTrain:
+    betaU[u] = 0
+    betaI[g] = 0
+    r_ui[(u, g)] = d["hours_transformed"]
+    globalAverage += d["hours_transformed"]
+globalAverage /= len(hoursTrain)
+
+alpha = globalAverage  # Could initialize anywhere, this is a guess
+
+def iterate(lamb, alpha, betaU, betaI):
+    temp = 0
+    for u, g, d in hoursTrain:
+        temp += r_ui[(u, g)] - (betaU[u] + betaI[g])
+    alpha = temp / len(hoursTrain)
+
+    for u in betaU:
+        temp = 0
+        for g in user_game[u]:
+            temp += r_ui[(u, g)] - (alpha + betaI[g])
+        betaU[u] = temp / (lamb + len(user_game[u]))
+
+    for g in betaI:
+        temp = 0
+        for u in game_user[g]:
+            temp += r_ui[(u, g)] - (alpha + betaU[u])
+        betaI[g] = temp / (lamb + len(game_user[g]))
+    return alpha
+
+for i in range(10):
+    alpha = iterate(5, alpha, betaU, betaI)
+
+predictions = open("predictions_Hours.csv", 'w')
+for l in open("pairs_Hours.csv"):
+    if l.startswith("userID"):
+        predictions.write(l)
+        continue
+    u,g = l.strip().split(',')
+    
+    pred = alpha + betaU[u] + betaI[g]
+
+    _ = predictions.write(u + ',' + g + ',' + str(pred) + '\n')
+
+predictions.close()
+
+### Would-play
 def jaccard_simularity(g1, g2):
     u1 = game_user[g1]
     u2 = game_user[g2]

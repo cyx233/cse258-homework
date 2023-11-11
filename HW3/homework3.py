@@ -220,9 +220,6 @@ for u, g, d in hoursValid:
     labels.append(d["hours_transformed"])
 
 validMSE = metrics.mean_squared_error(labels, preds)
-plt.scatter(list(range(len(labels))), labels, c="r", s=1)
-plt.scatter(list(range(len(preds))), preds, c="b", s=1)
-plt.savefig("Q6")
 
 answers["Q6"] = validMSE
 assertFloat(answers["Q6"])
