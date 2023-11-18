@@ -43,7 +43,7 @@ game_user = defaultdict(set)
 user_hours = defaultdict(dict)
 game_hours = defaultdict(dict)
 
-for i in hoursTrain:
+for i in allHours:
     user_game[i[0]].add(i[1])
     game_user[i[1]].add(i[0])
     user_hours[i[0]][i[1]] = i[2]
@@ -62,7 +62,7 @@ negHoursValid = [
 
 ### Time-played
 ### baseline    4.988273760366987
-### now         3.0629636914492
+### now         3.054113872717232
 ### grade       1.5/2
 def iterate(lamb, alpha, betaU, betaI):
     new_betaU = {
@@ -115,7 +115,7 @@ with open("predictions_Hours.csv", "w") as f:
 
 ### Would-play
 ### baseline    0.6806
-### now         0.6929
+### now         0.696
 ## grade        1/2
 medianUser = numpy.median([len(i) for i in user_game.values()])
 medianGame = numpy.median([len(i) for i in game_user.values()])
